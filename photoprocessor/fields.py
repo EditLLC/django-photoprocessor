@@ -24,7 +24,7 @@ class JSONFieldDescriptor(object):
             raise AttributeError(
                 "The '%s' attribute can only be accessed from %s instances."
                 % (self.field.name, owner.__name__))
-        
+
         if not hasattr(instance, self.field.get_cache_name()):
             data = instance.__dict__.get(self.field.attname, dict())
             if not isinstance(data, dict):
@@ -32,7 +32,7 @@ class JSONFieldDescriptor(object):
                 if data is None:
                     data = dict()
             setattr(instance, self.field.get_cache_name(), data)
-        
+
         return getattr(instance, self.field.get_cache_name())
 
     def __set__(self, instance, value):
@@ -67,7 +67,7 @@ class JSONField(models.TextField):
     def contribute_to_class(self, cls, name):
         super(JSONField, self).contribute_to_class(cls, name)
         setattr(cls, self.name, self.descriptor_class(self))
-    
+
     def pre_save(self, model_instance, add):
         "Returns field's value just before saving."
         descriptor = getattr(model_instance, self.attname)
@@ -104,7 +104,7 @@ class JSONField(models.TextField):
         except ValueError:
             val = None
         return val
-    
+
     def south_field_triple(self):
         "Returns a suitable description of this field for South."
         # We'll just introspect the _actual_ field.
@@ -122,20 +122,20 @@ class ImageFile(FieldFile):
         self.key = key
         name = self.image_data['path']
         FieldFile.__init__(self, instance, field, name)
-    
+
     @property
     def info(self):
         return self.image_data['info']
-    
+
     def width(self):
         return self.info['size']['width']
-    
+
     def height(self):
         return self.info['size']['height']
-    
+
     def save(self, *args, **kwargs):
         raise NotImplementedError
-    
+
     def delete(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -150,7 +150,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
             self.data['original'] = self.image_data
         name = self.image_data.get('path', None)
         FieldFile.__init__(self, instance, field, name)
-    
+
     def image(self):
         self.file.open()
         self.file.seek(0)
@@ -160,25 +160,25 @@ class ImageWithProcessorsFieldFile(FieldFile):
             self.file.seek(0)
             cf = ContentFile(self.file.read())
             return Image.open(cf)
-    
+
     @property
     def info(self):
         return self.image_data['info']
-    
+
     def width(self):
         return self.info['size']['width']
-    
+
     def height(self):
         return self.info['size']['height']
-    
+
     def has_key(self, key):
         return key in self.field.thumbnails
-    
+
     def __contains__(self, key):
         return self.has_key(key)
-    
+
     #TODO __setitem__ should manually specify the image
-    
+
     def __getitem__(self, key):
         if key in self.field.thumbnails:
             if key not in self.data and 'original' in self.data:
@@ -192,41 +192,41 @@ class ImageWithProcessorsFieldFile(FieldFile):
                         return self.field.no_image
                     return FieldFile(self.instance, self.field, None)
                 config = self.field.thumbnails[key]
-                
+
                 thumb_name = '%s-%s%s' % (base_name, key, base_ext)
                 self.data[key] = self._process_thumbnail(source_image, thumb_name, config)
                 self.instance.save()
-            
+
             if key in self.data:
                 return ImageFile(self.instance, self.field, self.data, key)
             if self.field.no_image is not None:
                 return self.field.no_image
             return FieldFile(self.instance, self.field, None)
         raise KeyError
-    
+
     def _process_thumbnail(self, source_image, thumb_name, config):
         img, info = process_image(source_image, config)
-        
+
         thumb_name = self.field.generate_filename(self.instance, thumb_name)
         #not efficient, requires image to be loaded into memory
         thumb_fobj = ContentFile(img_to_fobj(img, info).read())
         thumb_name = self.storage.save(thumb_name, thumb_fobj)
-        
+
         return {'path':thumb_name, 'config':config, 'info':info}
-    
+
     def _get_url(self):
         if not self and self.field.no_image is not None:
             return self.field.no_image.url
         return FieldFile._get_url(self)
     url = property(_get_url)
-    
+
     def reprocess_info(self, save=True):
         source_image = self.image()
         self.data['original']['info'] = process_image_info(source_image)
         if save:
             self.instance.save()
     reprocess_info.alters_data = True
-    
+
     def reprocess_thumbnail_info(self, save=True):
         source_image = self.image()
         for key, config in self.field.thumbnails.iteritems():
@@ -236,7 +236,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
         if save:
             self.instance.save()
     reprocess_thumbnail_info.alters_data = True
-    
+
     def reprocess_thumbnails(self, save=True, force_reprocess=False):
         base_name, base_ext = os.path.splitext(os.path.basename(self.name))
         source_image = self.image()
@@ -250,14 +250,14 @@ class ImageWithProcessorsFieldFile(FieldFile):
         if save:
             self.instance.save()
     reprocess_thumbnails.alters_data = True
-    
+
     def reprocess(self, save=True, force_reprocess=False):
         self.reprocess_info(save=False)
         self.reprocess_thumbnails(save=False, force_reprocess=force_reprocess)
         if save:
             self.instance.save()
     reprocess.alters_data = True
-    
+
     def save(self, name, content, save=True, force_reprocess=True):
         name = self.field.generate_filename(self.instance, name)
         self.name = self.storage.save(name, content)
@@ -266,7 +266,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
         # Update the filesize cache
         self._size = content.size
         self._committed = True
-        
+
         #now update the children
         base_name, base_ext = os.path.splitext(os.path.basename(name))
         source_image = self.image()
@@ -275,7 +275,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
                 continue
             thumb_name = '%s-%s%s' % (base_name, key, base_ext)
             self.data[key] = self._process_thumbnail(source_image, thumb_name, config)
-        
+
         self.data['original']['info'] = process_image_info(source_image)
         self.image_data = self.data['original']
 
@@ -292,7 +292,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
             del self.file
 
         self.storage.delete(self.name)
-        
+
         for key, image in self.data.iteritems():
             if key != 'original':
                 self.storage.delete(image['path'])
@@ -309,7 +309,7 @@ class ImageWithProcessorsFieldFile(FieldFile):
         if save:
             self.instance.save()
     delete.alters_data = True
-    
+
     def _require_file(self):
         if self.field.no_image is not None:
             return
@@ -321,9 +321,9 @@ class ImageWithProcessorsDesciptor(JSONFieldDescriptor):
             raise AttributeError(
                 "The '%s' attribute can only be accessed from %s instances."
                 % (self.field.name, owner.__name__))
-        
+
         data = JSONFieldDescriptor.__get__(self, instance, owner)
-        
+
         return self.field.attr_class(instance, self.field, data)
 
     def __set__(self, instance, value):
@@ -349,28 +349,32 @@ class ImageWithProcessorsDesciptor(JSONFieldDescriptor):
 class ImageWithProcessorsField(JSONField):
     descriptor_class = ImageWithProcessorsDesciptor
     attr_class = ImageWithProcessorsFieldFile
-    
+
     def __init__(self, **kwargs):
         kwargs.setdefault('blank', False)
         self.thumbnails = kwargs.pop('thumbnails')
         self.upload_to = kwargs.pop('upload_to')
         self.no_image = kwargs.pop('no_image', None)
         self.storage = kwargs.pop('storage', default_storage)
+
+        if callable(self.upload_to):
+            self.generate_filename = self.upload_to
+
         JSONField.__init__(self, **kwargs)
-    
+
     def value_to_string(self, obj):
         """
         Returns a string value of this field from the passed obj.
         This is used by the serialization framework.
         """
         return smart_unicode(self.dumps(self._get_val_from_obj(obj).data))
-    
+
     def contribute_to_class(self, cls, name):
         from copy import copy
         self = copy(self) #allow inherited models to have their own thumbnails defined
         super(ImageWithProcessorsField, self).contribute_to_class(cls, name)
         setattr(cls, self.name, self.descriptor_class(self))
-    
+
     def get_directory_name(self):
         return os.path.normpath(force_unicode(datetime.datetime.now().strftime(smart_str(self.upload_to))))
 
@@ -379,7 +383,7 @@ class ImageWithProcessorsField(JSONField):
 
     def generate_filename(self, instance, filename):
         return os.path.join(self.get_directory_name(), self.get_filename(filename))
-    
+
     def save_form_data(self, instance, data):
         # Important: None means "no change", other false value means "clear"
         # This subtle distinction (rather than a more explicit marker) is
