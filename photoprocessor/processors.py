@@ -141,6 +141,10 @@ class Resize(ImageProcessor):
         cur_width, cur_height = img.size
         config = config[self.key]
         size = config['width'], config['height']
+        
+        if cur_width <= config['width'] or cur_height <= config['height'] 
+            return False
+    
         crop = config.get('crop', self.crop)
         upscale = config.get('upscale', self.upscale)
         
