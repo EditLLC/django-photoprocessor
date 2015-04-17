@@ -142,7 +142,7 @@ class Resize(ImageProcessor):
         config = config[self.key]
         size = config['width'], config['height']
         
-        if cur_width <= config['width'] or cur_height <= config['height'] 
+        if cur_width <= config['width'] or cur_height <= config['height']: 
             return False
     
         crop = config.get('crop', self.crop)

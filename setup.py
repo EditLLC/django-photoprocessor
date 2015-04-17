@@ -19,8 +19,9 @@ setup(
     tests_require=(
         'pep8==1.3.1',
         'coverage',
-        'django',
+        'django==1.6.8',
         'Mock',
+        'PIL',
     ),
     classifiers=[
         'Development Status :: 3 - Alpha',
